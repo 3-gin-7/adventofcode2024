@@ -1,0 +1,13 @@
+{
+    "workbench.colorCustomizations": {
+        "[Default Dark Modern]": {
+            "editor.lineHighlightBackground": "#10586771"
+        },
+        "[Default Light+]": {
+            "editor.lineHighlightBackground": "#d210103f"
+        },
+        "activityBar.background": "#342E00",
+        "titleBar.activeBackground": "#484001",
+        "titleBar.activeForeground": "#FFFBDB"
+    }
+}
