@@ -17,37 +17,53 @@ func main() {
 	count := 0
 	// loop over outer
 	for _, i := range input {
+		fmt.Println(i)
+		replica1 := readSlice(i)
+		replica2 := readSlice(i)
 
-		// special case is 2 and 3??
-		// get the seq increment
-		// run the validate on seq with increment
+		isValid, index := validate(i)
 
-		isValid := validate(i)
-		// fmt.Println(isValid)
+		if !isValid {
+			tmpRetry := false
+			if index != 0 {
+				damp1 := append(replica1[:index-1], replica1[index:]...)
+				retry1, _ := validate(damp1)
+				tmpRetry = retry1
+			}
+			damp2 := append(replica2[:index], replica2[index+1:]...)
+			damp3 := append(i[:index+1], i[index+2:]...)
+			retry2, _ := validate(damp2)
+			retry3, _ := validate(damp3)
 
-		if isValid {
+			check := tmpRetry || retry2 || retry3
+
+			if check {
+				count++
+			}
+		} else {
 			count++
 		}
-		// break
 	}
 
 	fmt.Printf("output is: %v", count)
 }
 
-func validate(i []int) bool {
+// determine if the sequence is *correct and return first index where it is not correct
+// *correct -  means that the sequence is either increasing or decreasing by no more than 3
+func validate(i []int) (bool, int) {
 	isValid := false
+	index := 0
 
-	fmt.Printf("got seq: %v\n\r", i)
 	// determine if sequence is increasing or decreasing
 	if (i[0] - i[1]) == 0 {
 		// seq is not increasing
-		return isValid
+		return isValid, 0
 	}
 
 	seq_inc := (i[0] - i[1]) < 0
-	// fmt.Printf("seq inc is: %v\r\n", seq_inc)
 
 	for j := 0; j < len(i); j++ {
+		index = j
 		if j == len(i)-1 {
 			break
 		}
@@ -62,7 +78,18 @@ func validate(i []int) bool {
 		}
 	}
 
-	return isValid
+	return isValid, index
+}
+
+// for some reason go modifies the original array during append
+// create new instance of the array
+func readSlice(slice []int) []int {
+	output := make([]int, len(slice))
+	for c, i := range slice {
+		output[c] = i
+	}
+
+	return output
 }
 
 func readFile() [][]int {
