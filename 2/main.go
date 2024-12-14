@@ -9,8 +9,11 @@ import (
 	"strings"
 )
 
-// 549 too high
-
+// second part is not good
+// struggled with performing operations on slices such as removing a single item from the slice to produce new slice
+// append seems to modify the original slice
+// instead of modification to the input for the validate method, consider updating the actual logic of the validate to check
+// items before and after the faulty item
 func main() {
 	input := readFile()
 
