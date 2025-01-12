@@ -9,43 +9,87 @@ import (
 
 func main() {
 	// assuming that start direction is always up and not at the end of the matrix
-	direction := "up"
-	hasNext := true
-	count := 0
-
 	matrix, x, y := readFile()
 
-	// setting current position to visited
+	// part one
+	part_one_count, _ := getStepsCount(&matrix, x, y, false)
+	// part_one_count := 0
+
+	// part two
+	part_two_count := 0
+	for i := 0; i < len(matrix); i++ {
+		for j := 0; j < len(matrix[i]); j++ {
+			if matrix[i][j] != "#" {
+				tmp := matrix[i][j]
+				matrix[i][j] = "#"
+				_, hasCycle := getStepsCount(&matrix, x, y, true)
+
+				if hasCycle {
+					part_two_count++
+				}
+
+				matrix[i][j] = tmp
+			}
+		}
+	}
+
+	fmt.Printf("part one count is: %v\r\n", part_one_count)
+	fmt.Printf("part two count is: %v\r\n", part_two_count)
+}
+
+func getStepsCount(matrix *[][]string, x int, y int, detectCycles bool) (int, bool) {
+	count := 0
+	direction := "up"
+	hasNext := true
+	hasCycle := false
+	visitedMap := make(map[string][]string)
+
+	// mark the initial position
 	count++
-	matrix[x][y] = "X"
+	(*matrix)[x][y] = "X"
 
 	for {
 		if !hasNext {
 			break
 		}
 
+		if detectCycles {
+			key := fmt.Sprintf("%v|%v", x, y)
+			value, ok := visitedMap[key]
+
+			if ok && checkSliceForDirection(value, direction) {
+				// same position with the same direction
+				hasCycle = true
+				break
+			}
+
+			// map the visited node
+			visitedMap[key] = append(visitedMap[key], direction)
+		}
+
 		// get next coords
 		new_x, new_y := getNext(direction, x, y)
 		// check out of bounds
-		if new_x < 0 || new_y < 0 || new_x >= len(matrix) || new_y >= len(matrix[x]) {
+		if new_x < 0 || new_y < 0 || new_x >= len(*matrix) || new_y >= len((*matrix)[x]) {
 			// out of bounds
 			hasNext = false
 		} else {
 			// not out of bounds
-			if matrix[new_x][new_y] == "#" {
+			if (*matrix)[new_x][new_y] == "#" {
 				direction = updateDirection(direction)
 			} else {
 				x = new_x
 				y = new_y
 
-				if matrix[x][y] != "X" {
+				if (*matrix)[x][y] != "X" {
 					count++
-					matrix[x][y] = "X"
+					(*matrix)[x][y] = "X"
 				}
 			}
 		}
 	}
-	fmt.Printf("count is: %v", count)
+
+	return count, hasCycle
 }
 
 func updateDirection(direction string) string {
@@ -78,6 +122,16 @@ func getNext(direction string, x int, y int) (int, int) {
 	}
 
 	return x, y
+}
+
+func checkSliceForDirection(slice []string, direction string) bool {
+	for _, i := range slice {
+		if i == direction {
+			return true
+		}
+	}
+
+	return false
 }
 
 func readFile() ([][]string, int, int) {
