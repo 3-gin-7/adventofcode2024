@@ -12,57 +12,39 @@ func main() {
 	direction := "up"
 	hasNext := true
 	count := 0
-	debug := 0
-	// run while loop until either i or j > len
-	// run count and increase it everytime matrix[i][j] == "." and change it to "X"
-	// determine the rotation mechanism.
-	// direction string
-	// update with switch case
 
 	matrix, x, y := readFile()
-	fmt.Println("working")
+
+	// setting current position to visited
+	count++
+	matrix[x][y] = "X"
 
 	for {
 		if !hasNext {
 			break
 		}
 
-		// inc count if cell is new and mark it with X
-		if matrix[x][y] == "X" {
-			// count++
+		// get next coords
+		new_x, new_y := getNext(direction, x, y)
+		// check out of bounds
+		if new_x < 0 || new_y < 0 || new_x >= len(matrix) || new_y >= len(matrix[x]) {
+			// out of bounds
+			hasNext = false
 		} else {
-			matrix[x][y] = "X"
-		}
-
-		for {
-			debug++
-			if debug == 5779 {
-				fmt.Println("hey")
-			}
-			// get next coords
-			new_x, new_y := getNext(direction, x, y)
-			// check out of bounds
-			if new_x < 0 || new_y < 0 || new_x >= len(matrix) || new_y >= len(matrix[x]) {
-				// out of bounds
-				hasNext = false
-				break
+			// not out of bounds
+			if matrix[new_x][new_y] == "#" {
+				direction = updateDirection(direction)
 			} else {
-				// not out of bounds
-				if matrix[new_x][new_y] == "#" {
-					direction = updateDirection(direction)
-				} else {
-					if matrix[new_x][new_y] != "X" {
-						count++
-					}
-					hasNext = true
-					x = new_x
-					y = new_y
-					break
+				x = new_x
+				y = new_y
+
+				if matrix[x][y] != "X" {
+					count++
+					matrix[x][y] = "X"
 				}
 			}
 		}
 	}
-	count++
 	fmt.Printf("count is: %v", count)
 }
 
