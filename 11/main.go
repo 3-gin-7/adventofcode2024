@@ -8,34 +8,38 @@ import (
 	"strings"
 )
 
-// this is super slow
-// need to think of another way of doing this
 func main() {
-	number_of_blinks := 25
-
 	stones := readFile()
 	fmt.Println(stones.listToSlice())
+	count := 0
 
-	for i := 0; i < number_of_blinks; i++ {
-		for j := 0; j < stones.length; j++ {
-
-			node := stones.getAtIndex(j)
-			transformed_stones := applyRules(node.data)
-			if len(transformed_stones) == 1 {
-				node.data = strconv.Itoa(transformed_stones[0])
-			} else {
-				stones.insertAtIndex([]string{strconv.Itoa(transformed_stones[0]), strconv.Itoa(transformed_stones[1])}, j)
-				j++
-			}
-		}
+	for j := 0; j < stones.length; j++ {
+		count += test(0, stones.getAtIndex(j).data, 1)
 	}
-	fmt.Println(stones.length)
+	fmt.Println(count)
 }
 
-func applyRules(data string) []int {
+func test(blink int, stones string, stone_count int) int {
+	if blink == 25 {
+		return stone_count
+	}
+
+	transformed_stone := applyRulesTwo(stones)
+	if len(transformed_stone) > 1 {
+		stone_count++
+	}
+
+	for _, i := range transformed_stone {
+		stone_count = test(blink+1, i, stone_count)
+	}
+
+	return stone_count
+}
+
+func applyRulesTwo(data string) []string {
 	int_data, _ := strconv.Atoi(data)
 	if int_data == 0 {
-		return []int{1}
+		return []string{"1"}
 	}
 
 	node_length := len(data)
@@ -43,15 +47,15 @@ func applyRules(data string) []int {
 		first_part, _ := strconv.Atoi(data[:node_length/2])
 		second_part, _ := strconv.Atoi(data[node_length/2:])
 
-		return []int{first_part, second_part}
+		return []string{strconv.Itoa(first_part), strconv.Itoa(second_part)}
 	}
 
-	return []int{int_data * 2024}
+	return []string{strconv.Itoa(int_data * 2024)}
 }
 
 func readFile() *LinkedList {
-	// FILE_NAME := "test.txt"
-	FILE_NAME := "input.txt"
+	FILE_NAME := "test.txt"
+	// FILE_NAME := "input.txt"
 	fi, err := os.Open(FILE_NAME)
 	if err != nil {
 		panic(err)
