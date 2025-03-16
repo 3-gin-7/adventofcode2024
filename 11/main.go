@@ -11,57 +11,58 @@ import (
 func main() {
 	stones := readFile()
 	fmt.Println(stones.listToSlice())
-	seen_numbers := make(map[string][]string)
+	max_depth := 75
+	seen_numbers := make(map[string]int)
+	stone_count := 0
 
-	for i := 0; i < 75; i++ {
-		fmt.Printf("iteration %v: stones count: %v\r\n", i, stones.length)
-		for j := 0; j < stones.length; j++ {
-			node := stones.getAtIndex(j)
-			transformed_stones := strings.Split(node.data, " ")
+	list_count := stones.length
 
-			value, ok := seen_numbers[node.data]
-			if ok {
-				transformed_stones = value
-			} else {
-				transformed_stones = applyRulesTwo(transformed_stones)
-				seen_numbers[node.data] = transformed_stones
-			}
-
-			stones.insertRangeAtIndex(transformed_stones, j)
-			j += len(transformed_stones) - 1
-		}
+	for j := 0; j < list_count; j++ {
+		fmt.Printf("processing %v out of %v\r\n", j, list_count)
+		// get the node
+		node := stones.getAtIndex(j)
+		stone_count += generateBranches(max_depth+1, 0, node, stones, seen_numbers)
 	}
 
-	fmt.Println(stones.length)
+	fmt.Println(stone_count)
 }
 
-func test(blink int, stones string, stone_count int) int {
-	if blink == 25 {
+func generateBranches(max_depth, current_depth int, node *Node, stones *LinkedList, seen_numbers map[string]int) int {
+	stone_count := 0
+	current_depth++
+	node.stone_count = node.getChildrenStoneCount()
+
+	key := fmt.Sprintf("%v,%v", node.data, current_depth)
+
+	if current_depth == max_depth {
+		stone_count++
 		return stone_count
 	}
 
-	transformed_stone := applyRules(stones)
-	if len(transformed_stone) > 1 {
-		stone_count++
+	val, ok := seen_numbers[key]
+
+	if ok {
+		stone_count += val
+		return stone_count
 	}
 
-	for _, i := range transformed_stone {
-		if i != "1" && i != "0" {
-			stone_count = test(blink+1, i, stone_count)
+	trans_stones := applyRules(node.data)
+	node.left = &Node{data: trans_stones[0], parent: node, stone_count: 1}
+
+	if len(trans_stones) > 1 {
+		node.right = &Node{data: trans_stones[1], parent: node, stone_count: 1}
+	}
+
+	for i := 0; i < len(trans_stones); i++ {
+		if i == 0 {
+			stone_count += generateBranches(max_depth, current_depth, node.left, stones, seen_numbers)
+		} else {
+			stone_count += generateBranches(max_depth, current_depth, node.right, stones, seen_numbers)
 		}
 	}
 
+	seen_numbers[key] = stone_count
 	return stone_count
-}
-
-func applyRulesTwo(data []string) []string {
-	output := []string{}
-	for _, i := range data {
-		new_data := applyRules(i)
-		output = append(output, new_data...)
-	}
-
-	return output
 }
 
 func applyRules(data string) []string {
@@ -104,8 +105,13 @@ func readFile() *LinkedList {
 }
 
 type Node struct {
-	data string
-	next *Node
+	data        string
+	parent      *Node // parent node
+	next        *Node // next in the list
+	left        *Node // left child
+	right       *Node // right child
+	stone_count int
+	depth       int
 }
 
 type LinkedList struct {
@@ -128,44 +134,6 @@ func (list *LinkedList) insert(data string) {
 	}
 }
 
-func (list *LinkedList) insertAtIndex(data []string, index int) {
-	if list.length <= index {
-		panic("index is out of range")
-	}
-	list.length++
-
-	insert_node := list.head
-	for i := 0; i < index; i++ {
-		insert_node = insert_node.next
-	}
-
-	future_next := insert_node.next
-	insert_node.data = data[0]
-	insert_node.next = &Node{data: data[1], next: future_next}
-}
-
-func (list *LinkedList) insertRangeAtIndex(data []string, index int) {
-	if list.length <= index {
-		panic("index is out of range")
-	}
-	list.length += len(data) - 1
-
-	insert_node := list.head
-	for i := 0; i < index; i++ {
-		insert_node = insert_node.next
-	}
-
-	insert_node.data = data[0]
-	link_node := insert_node.next
-	for i := 1; i < len(data); i++ {
-		new_node := &Node{data: data[i], next: link_node}
-		insert_node.next = new_node
-		insert_node = new_node
-	}
-
-	insert_node.next = link_node
-}
-
 func (list *LinkedList) listToSlice() []string {
 	output := []string{}
 
@@ -177,6 +145,41 @@ func (list *LinkedList) listToSlice() []string {
 	}
 
 	return output
+}
+
+func (node *Node) getChildrenStoneCount() int {
+	count := 0
+	if node.left != nil {
+		count += node.left.stone_count
+	}
+
+	if node.right != nil {
+		count += node.right.stone_count
+	}
+
+	return count
+}
+
+func (node *Node) getStoneCountForDepth(depth int) int {
+
+	return recursiveDepthStoneCount(depth, 0, node)
+}
+
+func recursiveDepthStoneCount(depth, count int, node *Node) int {
+	if depth == 0 {
+		return 1
+	}
+
+	depth--
+
+	if node.left != nil {
+		count += recursiveDepthStoneCount(depth, count, node.left)
+	}
+
+	if node.right != nil {
+		count += recursiveDepthStoneCount(depth, count, node.left)
+	}
+	return count
 }
 
 func (list *LinkedList) getAtIndex(index int) *Node {
@@ -191,14 +194,4 @@ func (list *LinkedList) getAtIndex(index int) *Node {
 	}
 
 	return node
-}
-
-func (list *LinkedList) toList() []string {
-	output := make([]string, list.length)
-	for i := 0; i < list.length; i++ {
-		node := list.getAtIndex(i)
-		output[i] = node.data
-	}
-
-	return output
 }
