@@ -8,6 +8,9 @@ import (
 	"strings"
 )
 
+// had issues with memory since I was saving subtrees instead of the counts
+// switched seen_numbers from map of nodes to a map of ints
+// potentially could try removing the nodes with lesser depth if the key is the same
 func main() {
 	stones := readFile()
 	fmt.Println(stones.listToSlice())
