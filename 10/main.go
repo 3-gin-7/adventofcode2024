@@ -12,12 +12,6 @@ import (
 func main() {
 	matrix, trail_starts := readFile()
 
-	// fmt.Println(matrix)
-	// fmt.Println(trail_starts)
-
-	// loop over the trail starts
-	// checkIfFullTrail
-	// get the starting point "0" coords
 	output := 0
 	trail_count := 0
 	trailCount := make(map[string][]string)
@@ -31,8 +25,8 @@ func main() {
 		trail_count += len(value)
 	}
 
-	fmt.Println(trail_count)
-	// fmt.Println(output)
+	fmt.Printf("part one: %v\r\n", trail_count)
+	fmt.Printf("part two: %v\r\n", output)
 }
 
 func getTrailCount(i string, matrix [][]string, history []string, uniqueTrails *map[string][]string) int {
@@ -163,7 +157,6 @@ func readFile() ([][]string, []string) {
 	trailheads := []string{}
 
 	// FILE_NAME := "test.txt"
-	// FILE_NAME := "tmp.txt"
 	FILE_NAME := "input.txt"
 
 	fi, err := os.Open(FILE_NAME)
