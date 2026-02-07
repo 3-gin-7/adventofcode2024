@@ -14,8 +14,102 @@ func main() {
 	start, end, nodes := readFile()
 
 	part_one_cost := getPartOnePaths(nodes, start, end)
-
 	fmt.Printf("Part one count: %v\r\n", part_one_cost)
+
+	part_two_cost := getPartTwoPaths(nodes, start, end, part_one_cost)
+	fmt.Printf("Part two count: %v\r\n", part_two_cost)
+}
+
+func getPartTwoPaths(nodes map[string]string, start, end string, part_one_cost int) int {
+	dists := make(map[State]int)
+	parents := make(map[State][]State)
+
+	pq := &PriorityQueue{}
+	heap.Init(pq)
+
+	start_state := State{Coord: start, Direction: ">"}
+	dists[start_state] = 0
+	heap.Push(pq, &Edge{Cost: 0, Coord: start, Direction: ">"})
+
+	for pq.Len() > 0 {
+		item := heap.Pop(pq).(*Edge)
+		dist := item.Cost
+		coords := item.Coord
+		direction := item.Direction
+
+		current_state := State{Coord: coords, Direction: direction}
+
+		// Skip if found a better path
+		if val, exists := dists[current_state]; exists && dist > val {
+			continue
+		}
+
+		x, y := getIntCoords(coords)
+
+		// Check all directions
+		moves := []struct {
+			coords    string
+			direction string
+			dx, dy    int
+		}{
+			{getStrCoords(x-1, y), "^", -1, 0},
+			{getStrCoords(x+1, y), "v", 1, 0},
+			{getStrCoords(x, y-1), "<", 0, -1},
+			{getStrCoords(x, y+1), ">", 0, 1},
+		}
+
+		for _, move := range moves {
+			if _, ok := nodes[move.coords]; !ok {
+				continue
+			}
+
+			cost := getDirectionIncrease(direction, move.direction)
+			new_dist := dist + cost
+			new_state := State{Coord: move.coords, Direction: move.direction}
+
+			if val, exists := dists[new_state]; !exists || new_dist < val {
+				// better path
+				dists[new_state] = new_dist
+				parents[new_state] = []State{current_state}
+				heap.Push(pq, &Edge{Cost: new_dist, Direction: move.direction, Coord: move.coords})
+			} else if new_dist == val {
+				// equally good path
+				parents[new_state] = append(parents[new_state], current_state)
+			}
+		}
+	}
+
+	// Find all end states with the minimum cost
+	end_states := []State{}
+	for _, dir := range []string{"^", "v", "<", ">"} {
+		state := State{Coord: end, Direction: dir}
+		if cost, exists := dists[state]; exists && cost == part_one_cost {
+			end_states = append(end_states, state)
+		}
+	}
+
+	// Backtrack from all end states to find all tiles on shortest paths
+	tiles_on_path := make(map[string]bool)
+	visited := make(map[State]bool)
+
+	var backtrack func(State)
+	backtrack = func(state State) {
+		if visited[state] {
+			return
+		}
+		visited[state] = true
+		tiles_on_path[state.Coord] = true
+
+		for _, parent := range parents[state] {
+			backtrack(parent)
+		}
+	}
+
+	for _, end_state := range end_states {
+		backtrack(end_state)
+	}
+
+	return len(tiles_on_path)
 }
 
 func getPartOnePaths(graph map[string]string, start, end string) int {
@@ -194,4 +288,9 @@ type Edge struct {
 	Coord     string
 	Direction string
 	Cost      int
+}
+
+type State struct {
+	Coord     string
+	Direction string
 }
