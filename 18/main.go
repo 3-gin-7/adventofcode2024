@@ -12,11 +12,11 @@ func main() {
 	// byes_to_read := 12
 	// max_x := 6
 	// max_y := 6
-	byes_to_read := 1024
+	bytes_to_read := 1024
 	max_x := 70
 	max_y := 70
 
-	matrix, err := readFile(byes_to_read, max_x, max_y)
+	matrix, _, err := readFile(bytes_to_read, max_x, max_y)
 	if err != nil {
 		panic(err)
 	}
@@ -26,6 +26,106 @@ func main() {
 	part_one_setps := partOneSteps(matrix, max_x, max_y)
 
 	fmt.Printf("Part one steps: %v\r\n", part_one_setps)
+
+	new_matrix, bytes, err := readFile(-1, max_x, max_y)
+	if err != nil {
+		panic(err)
+	}
+	printMatrix(new_matrix)
+
+	part_two_bytes := partTwoBytes(new_matrix, bytes, max_x, max_y)
+
+	fmt.Printf("Part two bytes :%v\r\n", part_two_bytes)
+}
+
+func partTwoBytes(new_matrix [][]string, bytes []string, max_x, max_y int) string {
+	// since range in 0 to max each row/col count is max + 1 and total elements are the area of the grid
+	total_x := max_x + 1
+	total_y := max_y + 1
+	total := total_x * total_y
+
+	// directions
+	directions := []struct{ x, y int }{{0, 1}, {0, -1}, {1, 0}, {-1, 0}}
+
+	unions := NewUnion(total)
+	// ids of open nodes
+	is_open := make([]bool, total)
+
+	// start and end ids
+	start_id := getUnionIdFromInts(0, 0, total_x)
+	end_id := getUnionIdFromInts(max_x, max_y, total_x)
+
+	// go over the open coords and add mark them
+	for y := range new_matrix {
+		for x := range new_matrix[y] {
+			if new_matrix[y][x] == "." {
+				id := getUnionIdFromInts(x, y, total_x)
+				is_open[id] = true
+			}
+		}
+	}
+
+	// union connected open nodes
+	for y := range new_matrix {
+		for x := range new_matrix[y] {
+			id := getUnionIdFromInts(x, y, total_x)
+			if !is_open[id] {
+				continue
+			}
+
+			for _, dir := range directions {
+				new_x, new_y := x+dir.x, y+dir.y
+				// check bounds and if it is open
+				if new_x >= 0 && new_x < total_x && new_y >= 0 && new_y < total_y && new_matrix[new_y][new_x] == "." {
+					new_id := getUnionIdFromInts(new_x, new_y, total_x)
+					// union the nodes
+					unions.union(id, new_id)
+				}
+			}
+		}
+	}
+
+	for i := 0; i < len(bytes); i++ {
+		byte := bytes[len(bytes)-i-1]
+
+		// split the byte into x and y coordinates
+		x, y := parseCoords(byte)
+		new_matrix[y][x] = "."
+		id := getUnionIdFromInts(x, y, total_x)
+		is_open[id] = true
+
+		// continue untile start and end are open
+		if !is_open[start_id] || !is_open[end_id] {
+			continue
+		}
+
+		// loop over all dirs and check if any are in nodes
+		for _, dir := range directions {
+			new_x, new_y := x+dir.x, y+dir.y
+			// check bounds
+			if new_x < 0 || new_x > max_x || new_y < 0 || new_y > max_y {
+				continue
+			}
+
+			// check if wall
+			if new_matrix[new_y][new_x] == "#" {
+				continue
+			}
+
+			// union id of new node
+			new_id := getUnionIdFromInts(new_x, new_y, total_x)
+
+			// union the nodes
+			unions.union(id, new_id)
+		}
+
+		// check if start and end are connected
+		if unions.find(start_id) == unions.find(end_id) {
+			return byte
+		}
+	}
+
+	return ""
 }
 
 // bfs search for shortest path
@@ -73,11 +173,20 @@ func parseCoords(coord string) (int, int) {
 	return x, y
 }
 
-func readFile(bytes_to_read, max_x, max_y int) ([][]string, error) {
+func getUnionIdFromStr(coords string, max int) int {
+	x, y := parseCoords(coords)
+	return getUnionIdFromInts(x, y, max)
+}
+
+func getUnionIdFromInts(x, y, max int) int {
+	return y*max + x
+}
+
+func readFile(bytes_to_read, max_x, max_y int) ([][]string, []string, error) {
 	file, err := os.Open("input.txt")
 	// file, err := os.Open("test.txt")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer file.Close()
 
@@ -85,9 +194,10 @@ func readFile(bytes_to_read, max_x, max_y int) ([][]string, error) {
 	type point struct{ x, y int }
 	points := make([]point, 0)
 	bytes_read := 0
+	var bytes []string
 
 	for sc.Scan() {
-		if bytes_to_read > 0 && bytes_read >= bytes_to_read {
+		if bytes_to_read >= 0 && bytes_read >= bytes_to_read {
 			break
 		}
 
@@ -99,28 +209,29 @@ func readFile(bytes_to_read, max_x, max_y int) ([][]string, error) {
 		// splint and convert
 		parts := strings.Split(line, ",")
 		if len(parts) != 2 {
-			return nil, fmt.Errorf("invalid coords: %q", line)
+			return nil, nil, fmt.Errorf("invalid coords: %q", line)
 		}
 
 		x, err := strconv.Atoi(strings.TrimSpace(parts[0]))
 		if err != nil {
-			return nil, fmt.Errorf("x not a num %q: %w", parts[0], err)
+			return nil, nil, fmt.Errorf("x not a num %q: %w", parts[0], err)
 		}
 		y, err := strconv.Atoi(strings.TrimSpace(parts[1]))
 		if err != nil {
-			return nil, fmt.Errorf("y not a num %q: %w", parts[1], err)
+			return nil, nil, fmt.Errorf("y not a num %q: %w", parts[1], err)
 		}
 		// check bounds
 		if x < 0 || x > max_x || y < 0 || y > max_y {
-			return nil, fmt.Errorf("(%d,%d) out of bounds for max (%d,%d)", x, y, max_x, max_y)
+			return nil, nil, fmt.Errorf("(%d,%d) out of bounds for max (%d,%d)", x, y, max_x, max_y)
 		}
 
 		points = append(points, point{x: x, y: y})
+		bytes = append(bytes, line)
 		bytes_read++
 	}
 
 	if err := sc.Err(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	rows := max_y + 1
@@ -137,7 +248,7 @@ func readFile(bytes_to_read, max_x, max_y int) ([][]string, error) {
 		matrix[p.y][p.x] = "#"
 	}
 
-	return matrix, nil
+	return matrix, bytes, nil
 }
 
 func printMatrix(matrix [][]string) {
@@ -168,4 +279,40 @@ func (q *StepQueue) Pop() Queue {
 
 func (q *StepQueue) IsEmpty() bool {
 	return len(*q) == 0
+}
+
+type Union struct {
+	parent []int
+}
+
+func NewUnion(len int) *Union {
+	union := &Union{
+		parent: make([]int, len),
+	}
+
+	// set parent to itself
+	for i := 0; i < len; i++ {
+		union.parent[i] = i
+	}
+
+	return union
+}
+
+// get the id of root
+func (union *Union) find(i int) int {
+	if union.parent[i] != i {
+		union.parent[i] = union.find(union.parent[i])
+	}
+	return union.parent[i]
+}
+
+// union two nodes
+func (union *Union) union(a, b int) {
+	root_a := union.find(a)
+	root_b := union.find(b)
+	if root_a == root_b {
+		return
+	}
+
+	union.parent[root_a] = root_b
 }
